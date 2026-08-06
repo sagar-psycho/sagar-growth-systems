@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio · Kothakula Sagar</title>
+  <meta name="description" content="Portfolio of Kothakula Sagar — detailed case studies on CRM, AI SEO, marketing automation and web projects.">
+  <link href="../style.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body class="neo-bg">
+  <header class="py-3">
+    <div class="container d-flex justify-content-between align-items-center">
+      <a href="../index.html" class="text-decoration-none text-dark">← Back to landing</a>
+      <div class="h5 mb-0">Portfolio</div>
+      <div></div>
+    </div>
+  </header>
+
+  <main class="container py-5">
+    <section class="mb-5">
+      <h1 class="display-5">HELLO, I'M<br><strong>Kothakula<br>Sagar.</strong></h1>
+      <p class="lead text-muted">Digital Marketing · AI Workflows · Marketing Technology</p>
+      <div class="mb-4">
+        <span class="neu-badge me-2">Digital Marketing</span>
+        <span class="neu-badge me-2">AI Workflows</span>
+        <span class="neu-badge">Marketing Technology</span>
+      </div>
+    </section>
+
+    <!-- Experience Journey -->
+    <section id="experienceJourney" class="mb-5"></section>
+
+    <!-- Expertise + Tools -->
+    <section id="expertise" class="mb-5"></section>
+
+    <!-- Featured Projects -->
+    <section id="projectsShowcase" class="mb-5"></section>
+
+    <!-- Marketing Work -->
+    <section id="marketingWork" class="mb-5"></section>
+
+    <!-- How I Think -->
+    <section id="howIThink" class="mb-5"></section>
+
+    <!-- Tool Stack -->
+    <section id="toolStack" class="mb-5"></section>
+
+    <!-- Certifications -->
+    <section id="certificationsPanel" class="mb-5"></section>
+
+    <!-- Contact -->
+    <section id="contactPanel" class="mb-5"></section>
+  </main>
+
+  <footer class="py-4 text-center text-muted">© <span id="copyYear2"></span> Kothakula Sagar</footer>
+
+  <script src="../script.js" defer></script>
+  <script>
+    // ensure the portfolio-specific copy is rendered after main script executes
+    document.getElementById('copyYear2').textContent = new Date().getFullYear();
+    if(window.initPortfolio) window.initPortfolio();
+  </script>
+</body>
+</html>

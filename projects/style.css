@@ -1,0 +1,7 @@
+:root{--bg:#0b0f1a;--muted:#9aa3b2;--accent:#7c5cff}
+body{background:var(--bg);color:#eef3ff;font-family:Inter,system-ui,Segoe UI,Roboto}
+.section{padding:48px 0}
+.eyebrow{text-transform:uppercase;color:var(--muted);font-size:.8rem}
+.project-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+.project-card img{border-radius:8px}
+.project-actions .btn{min-width:120px}
