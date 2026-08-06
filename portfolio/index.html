@@ -203,11 +203,16 @@
 
 </head>
 <body class="neo-bg">
-  <header class="py-3">
-    <div class="container d-flex justify-content-between align-items-center">
+  <header class="site-header py-3">
+    <div class="container d-flex justify-content-between align-items-center gap-3">
       <a href="../index.html" class="text-decoration-none text-dark">← Back to landing</a>
       <div class="h5 mb-0">Portfolio</div>
-      <div></div>
+      <nav class="header-nav d-flex align-items-center gap-3">
+        <a href="#experienceJourney" class="nav-link">Experience</a>
+        <a href="#expertise" class="nav-link">Expertise</a>
+        <a href="#projectsShowcase" class="nav-link">Projects</a>
+        <a href="#contactPanel" class="nav-link">Contact</a>
+      </nav>
     </div>
   </header>
 
@@ -247,7 +252,17 @@
     <section id="contactPanel" class="mb-5"></section>
   </main>
 
-  <footer class="py-4 text-center text-muted">© <span id="copyYear2"></span> Kothakula Sagar</footer>
+  <footer class="footer-shell py-4">
+    <div class="container footer-inner">
+      <div>© <span id="copyYear2"></span> Kothakula Sagar</div>
+      <div class="footer-links">
+        <a href="../index.html">Home</a>
+        <a href="../portfolio/index.html">Portfolio</a>
+        <a href="../portfolio/index.html#projectsShowcase">Projects</a>
+        <a href="../portfolio/index.html#contactPanel">Contact</a>
+      </div>
+    </div>
+  </footer>
 
   <script src="../script.js" defer></script>
   <script>
