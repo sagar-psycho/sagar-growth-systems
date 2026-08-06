@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sagar-psycho.github.io/sagar-growth-systems/
