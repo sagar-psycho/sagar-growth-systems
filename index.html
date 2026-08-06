@@ -82,7 +82,7 @@
       <img src="assets/images/ksagar.png" alt="Kothakula Sagar" class="brand-avatar" onerror="this.style.display='none'">
       <span class="brand-text">
         <span class="brand-name">Kothakula Sagar</span>
-        <span class="brand-title">Digital Marketing Executive</span>
+        <span class="brand-title">Digital Marketer</span>
       </span>
     </a>
 
@@ -112,7 +112,7 @@
     <div class="container hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">DIGITAL MARKETING &nbsp;·&nbsp; AI WORKFLOWS &nbsp;·&nbsp; GROWTH SYSTEMS</p>
-        <h1 class="hero-title">I’m Kothakula Sagar digital marketer<br>turning marketing problems into<br><span class="text-accent">Growth Systems.</span></h1>
+        <h1 class="hero-title">I’m Kothakula Sagar, turning marketing challenges into<br><span class="text-accent">Growth Systems.</span></h1>
         <p class="hero-lead">I’m Kothakula Sagar, a digital marketer building SEO, paid ads, analytics and AI workflows that grow businesses.</p>
 
         <div class="hero-ctas">
@@ -142,7 +142,7 @@
 
       <div class="hero-visual">
         <div class="hero-photo-frame">
-          <img src="assets/images/ksagar.png" alt="Kothakula Sagar" class="hero-photo" onerror="this.parentElement.classList.add('no-photo')">
+          <img src="assets/images/sagark.png" alt="Kothakula Sagar" class="hero-photo" onerror="this.parentElement.classList.add('no-photo')">
         </div>
         <ul class="floating-skills" aria-hidden="true">
           <li>SEO</li>
@@ -311,6 +311,7 @@
         <a href="#projectsShowcase" class="btn btn-outline">View All Projects</a>
       </div>
       <div class="grid-3" id="projectsGrid">
+        
         <article class="proj-card reveal-up">
           <div class="proj-media">
             <span class="proj-tag">CRM</span>
@@ -320,7 +321,7 @@
             <h3>ABRA Logistics CRM</h3>
             <p>Lead generation campaigns produced enquiries but lacked structured tracking and follow-up.</p>
             <div class="tag-row"><span>HTML</span><span>CSS</span><span>JavaScript</span><span>Firebase</span></div>
-            <a class="card-link" href="#abra-crm">View Case Study <i class="bi bi-arrow-right"></i></a>
+            <a class="card-link case-study-trigger" href="#abra-crm" data-project-id="abra-crm">View Case Study <i class="bi bi-arrow-right"></i></a>
           </div>
         </article>
         <article class="proj-card reveal-up">
@@ -332,7 +333,7 @@
             <h3>ABRA Zylo AI SEO Generator</h3>
             <p>E-commerce sites need scalable SEO metadata and content for many products.</p>
             <div class="tag-row"><span>HTML</span><span>CSS</span><span>JavaScript</span><span>Groq AI</span></div>
-            <a class="card-link" href="#abra-zylo">View Case Study <i class="bi bi-arrow-right"></i></a>
+            <a class="card-link case-study-trigger" href="#abra-zylo" data-project-id="abra-zylo">View Case Study <i class="bi bi-arrow-right"></i></a>
           </div>
         </article>
         <article class="proj-card reveal-up">
@@ -344,7 +345,19 @@
             <h3>ABRA Design & Build CRM</h3>
             <p>Construction enquiries arrive from many channels and needed organized follow-up.</p>
             <div class="tag-row"><span>HTML</span><span>CSS</span><span>JavaScript</span><span>Firebase</span></div>
-            <a class="card-link" href="#design-build-crm">View Case Study <i class="bi bi-arrow-right"></i></a>
+            <a class="card-link case-study-trigger" href="#design-build-crm" data-project-id="design-build-crm">View Case Study <i class="bi bi-arrow-right"></i></a>
+          </div>
+        </article>
+                <article class="proj-card reveal-up">
+          <div class="proj-media">
+            <span class="proj-tag">Financial AI</span>
+            <img style="padding: 5%;"  src="assets/images/projects/finora.png" alt="Fiora AI" loading="lazy">
+          </div>
+          <div class="proj-body">
+            <h3>Fiora AI</h3>
+            <p>Your Fianacial AI helps to streamline financial processes and provide actionable insights.</p>
+            <div class="tag-row"><span>HTML</span><span>CSS</span><span>JavaScript</span><span>Firebase</span></div>
+            <a class="card-link case-study-trigger" href="#fiora-ai" data-project-id="fiora-ai">View Case Study <i class="bi bi-arrow-right"></i></a>
           </div>
         </article>
       </div>
@@ -527,7 +540,7 @@
           </div>
         </div>
         <div class="contact-photo">
-          <img src="assets/images/sagark.png" alt="Kothakula Sagar" onerror="this.parentElement.style.display='none'">
+          <img src="assets/images/kothakula sagar.png" alt="Kothakula Sagar" onerror="this.parentElement.style.display='none'">
         </div>
       </div>
     </div>
@@ -556,6 +569,15 @@
   <div class="work-modal-nav">
     <button id="workPrev" aria-label="Previous"><i class="bi bi-arrow-left"></i></button>
     <button id="workNext" aria-label="Next"><i class="bi bi-arrow-right"></i></button>
+  </div>
+</div>
+
+<!-- ===================== CASE STUDY MODAL ===================== -->
+<div class="case-study-backdrop" id="caseStudyBackdrop" hidden></div>
+<div class="case-study-modal" id="caseStudyModal" role="dialog" aria-modal="true" aria-labelledby="caseStudyModalTitle" aria-hidden="true" hidden>
+  <button class="case-study-close" id="caseStudyClose" aria-label="Close case study">&times;</button>
+  <div class="case-study-scroll" id="caseStudyScroll">
+    <div class="case-study-shell" id="caseStudyContent" tabindex="-1"></div>
   </div>
 </div>
 
