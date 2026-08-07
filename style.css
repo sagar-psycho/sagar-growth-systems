@@ -261,6 +261,34 @@ p{ margin:0; }
 .timeline-learning b{ color:var(--accent); }
 
 /* =========================================================
+   Education
+========================================================= */
+.education-section{ padding-top:68px; }
+.education-intro{ color:var(--muted); font-size:.95rem; margin-top:8px; max-width:56ch; }
+.education-timeline{ position:relative; padding-left:8px; display:flex; flex-direction:column; gap:14px; }
+.education-timeline::before{
+  content:''; position:absolute; left:22px; top:6px; bottom:6px; width:2px; background:linear-gradient(var(--border), var(--border));
+}
+.education-item{ position:relative; display:flex; gap:18px; align-items:flex-start; }
+.education-marker{
+  flex:none; width:46px; height:46px; border-radius:50%; background:var(--surface); border:2px solid var(--accent);
+  display:flex; align-items:center; justify-content:center; color:var(--accent); font-weight:800; font-size:.8rem; z-index:1;
+}
+.education-card{
+  flex:1; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:18px 20px; box-shadow:var(--shadow-sm); transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.education-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:rgba(65,71,234,0.16); }
+.education-period{ display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+.education-degree{ font-size:1.02rem; font-weight:800; margin-bottom:6px; }
+.education-short{ font-size:.82rem; font-weight:700; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+.education-specialization{ color:var(--muted); font-size:.92rem; margin-bottom:8px; }
+.education-institution{ color:var(--ink); font-size:.92rem; line-height:1.60; }
+.education-tags{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.education-tags span{ font-size:.72rem; font-weight:600; color:var(--accent); background:var(--accent-soft); padding:5px 10px; border-radius:999px; }
+.education-item.is-featured .education-card{ border-color:rgba(65,71,234,0.2); }
+
+/* =========================================================
    Project / Marketing cards
 ========================================================= */
 .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }

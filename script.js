@@ -48,6 +48,14 @@ const experienceJourney = [
     learning:'Marketing becomes more scalable when campaigns, leads and follow-up systems are connected.' }
 ];
 
+/* ---------- Education ---------- */
+const education = [
+  { period:'2023 — 2025', degree:'Master of Business Administration', shortName:'MBA', specialization:'Marketing & Information Technology (IT)', institution:'Akshara Institute of Management and Technology', tags:['Marketing','Information Technology'], featured:true },
+  { period:'2020 — 2023', degree:'Bachelor of Business Administration', shortName:'BBA', specialization:'General', institution:'MVR Degree College', tags:['Business Administration'], featured:false },
+  { period:'2018 — 2020', degree:'Intermediate', shortName:'CEC', specialization:'Commerce, Economics & Civics', institution:'Sai Sri Chaitanya Junior College', tags:['Commerce','Economics','Civics'], featured:false },
+  { period:'2018', degree:'SSLC (10th)', shortName:'', specialization:'', institution:'Don Bosco EM High School', tags:[], featured:false }
+];
+
 /* ---------- Featured Projects ---------- */
 const projects = [
   { id:'abra-crm', title:'ABRA Logistics CRM', category:'CRM', subtitle:'Lead Management & Marketing Automation System', createdDate:'January 2026',
@@ -277,6 +285,26 @@ function renderTimeline(){
       </div>
     </div>
   `).join('');
+}
+
+function renderEducation(){
+  const el = document.getElementById('educationTimeline');
+  if(!el) return;
+  if(shouldRender(el)){
+    el.innerHTML = education.map(item => `
+      <div class="education-item reveal-up ${item.featured ? 'is-featured' : ''}">
+        <div class="education-marker">${item.shortName ? item.shortName : '•'}</div>
+        <div class="education-card">
+          <div class="education-period">${escapeHtml(item.period)}</div>
+          <div class="education-degree">${escapeHtml(item.degree)}</div>
+          ${item.shortName ? `<div class="education-short">${escapeHtml(item.shortName)}</div>` : ''}
+          ${item.specialization ? `<div class="education-specialization">${escapeHtml(item.specialization)}</div>` : ''}
+          <div class="education-institution">${escapeHtml(item.institution)}</div>
+          ${item.tags && item.tags.length ? `<div class="education-tags">${item.tags.map(tag => `<span>${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
 }
 
 function renderProjects(){
@@ -711,6 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderWhatIDo();
   renderWorkflow();
   renderTimeline();
+  renderEducation();
   renderProjects();
   renderMarketingGrid();
   renderPrinciples();
