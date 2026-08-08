@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  function isAdmin() {
+    return request.auth != null && request.auth.uid == 'AnILRSVRCvUm3Olm3XxCO5tplFH3';
+  }
+
+  match /databases/{database}/documents {
+    match /blogs/{blogId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
