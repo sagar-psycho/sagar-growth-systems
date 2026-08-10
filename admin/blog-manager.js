@@ -96,20 +96,19 @@ function formatDate(value) {
   return value;
 }
 
+function formatDateTime(value) {
+  if (!value) return '—';
+  if (value instanceof Timestamp) {
+    return value.toDate().toLocaleString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  return value;
+}
+
 function createMessageEl(message, tone = 'info') {
   const wrapper = document.createElement('div');
   wrapper.className = `admin-message admin-message--${tone}`;
   wrapper.textContent = message;
   return wrapper;
-}
-
-function escapeHtml(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount, monthlyBlogStatus, moduleContent, activityHeading, dashboardTitle, greetingHeading }) {
@@ -121,8 +120,9 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
   let isDirty = false;
   let unsubscribe = null;
   let isSaving = false;
-  let activeUpload = false;
+  let isDeleting = false;
   let currentUserUid = null;
+  let activeUpload = false;
 
   function setMessage(message, tone = 'info') {
     const existing = moduleContent.querySelector('.admin-message');
@@ -132,259 +132,11 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
     }
   }
 
-  function setBusyState(isBusy) {
-    document.querySelectorAll('#saveDraftButton').forEach((button) => {
-      button.disabled = isBusy;
-    });
-    document.querySelectorAll('#publishButton').forEach((button) => {
-      button.disabled = isBusy;
-    });
-  }
-
-  function getTimestampValue(value) {
-    if (!value) return null;
-    if (value instanceof Timestamp) return value.toDate();
-    if (value?.toDate) return value.toDate();
-    if (value instanceof Date) return value;
-    if (typeof value === 'string') {
-      const parsed = new Date(value);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-    return null;
-  }
-
-  function getFeaturedImageMeta(blog) {
-    const featured = blog?.featuredImage;
-    if (featured && typeof featured === 'object') {
-      return {
-        url: featured.url || '',
-        publicId: featured.publicId || '',
-        alt: featured.alt || '',
-        width: featured.width || null,
-        height: featured.height || null
-      };
-    }
-    return {
-      url: blog?.featuredImageUrl || '',
-      publicId: '',
-      alt: '',
-      width: null,
-      height: null
-    };
-  }
-
-  function getFeaturedImageUrl(blog) {
-    return getFeaturedImageMeta(blog).url;
-  }
-
-  function renderFeaturedImagePreview() {
-    const image = getFeaturedImageMeta(currentDraft);
-    if (!image.url) {
-      return '<p class="hint">Choose an image from your computer to upload it automatically.</p>';
-    }
-    return `<img class="preview-image" src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || currentDraft.title || 'Featured image')}" onerror="this.style.display='none'">`;
-  }
-
-  function setFeaturedImageFromUrl(url) {
-    const normalized = String(url || '').trim();
-    currentDraft.featuredImage = {
-      url: normalized,
-      publicId: currentDraft.featuredImage?.publicId || '',
-      alt: currentDraft.featuredImage?.alt || '',
-      width: currentDraft.featuredImage?.width || null,
-      height: currentDraft.featuredImage?.height || null
-    };
-    currentDraft.featuredImageUrl = normalized;
-  }
-
-  function removeFeaturedImage() {
-    currentDraft.featuredImage = { url: '', publicId: '', alt: '', width: null, height: null };
-    currentDraft.featuredImageUrl = '';
-    isDirty = true;
-    renderEditor();
-  }
-
-  function removeBlockImage(blockId) {
-    const block = currentDraft.contentBlocks.find((item) => item.id === blockId);
-    if (!block) return;
-    block.url = '';
-    block.publicId = '';
-    block.width = null;
-    block.height = null;
-    isDirty = true;
-    renderEditor();
-  }
-
-  async function uploadFeaturedImage(file) {
-    if (activeUpload) {
-      setMessage('Please wait for image uploads to finish.', 'info');
-      return;
-    }
-    if (!file) return;
-    const status = moduleContent.querySelector('#featuredImageStatus');
-    if (status) status.textContent = 'Uploading image...';
-    activeUpload = true;
-    setBusyState(true);
-    try {
-      const data = await uploadImage(file, {
-        folder: 'portfolio/blogs/featured',
-        onProgress: (percentage) => {
-          if (status) status.textContent = `Uploading image... ${percentage}%`;
-        }
-      });
-      currentDraft.featuredImage = {
-        url: data.url,
-        publicId: data.publicId,
-        alt: currentDraft.featuredImage?.alt || '',
-        width: data.width,
-        height: data.height
-      };
-      currentDraft.featuredImageUrl = data.url;
-      isDirty = true;
-      renderEditor();
-      if (status) status.textContent = 'Image uploaded successfully.';
-      setMessage('Image uploaded successfully.', 'success');
-    } catch (error) {
-      if (status) status.textContent = error.message || 'Unable to upload image. Please try again.';
-      setMessage(error.message || 'Unable to upload image. Please try again.', 'error');
-    } finally {
-      activeUpload = false;
-      setBusyState(false);
-    }
-  }
-
-  async function uploadBlockImage(file, blockId) {
-    if (activeUpload) {
-      setMessage('Please wait for image uploads to finish.', 'info');
-      return;
-    }
-    const statusEl = moduleContent.querySelector(`[data-block-status="${blockId}"]`);
-    if (statusEl) statusEl.textContent = 'Uploading image...';
-    activeUpload = true;
-    setBusyState(true);
-    try {
-      const data = await uploadImage(file, {
-        folder: 'portfolio/blogs/content',
-        onProgress: (percentage) => {
-          if (statusEl) statusEl.textContent = `Uploading image... ${percentage}%`;
-        }
-      });
-      const block = currentDraft.contentBlocks.find((item) => item.id === blockId);
-      if (!block) return;
-      block.url = data.url;
-      block.publicId = data.publicId;
-      block.width = data.width;
-      block.height = data.height;
-      isDirty = true;
-      renderEditor();
-      if (statusEl) statusEl.textContent = 'Image uploaded successfully.';
-      setMessage('Image uploaded successfully.', 'success');
-    } catch (error) {
-      if (statusEl) statusEl.textContent = error.message || 'Unable to upload image. Please try again.';
-      setMessage(error.message || 'Unable to upload image. Please try again.', 'error');
-    } finally {
-      activeUpload = false;
-      setBusyState(false);
-    }
-  }
-
-  async function ensureAuthorized() {
-    if (!auth.currentUser) {
-      throw new Error('Authentication required');
-    }
-    currentUserUid = auth.currentUser.uid;
-    if (adminUid && currentUserUid !== adminUid) {
-      throw new Error('You are not authorized to manage blogs.');
-    }
-    return true;
-  }
-
-  function getSeoValidationItems(blog) {
-    const seo = blog?.seo || {};
-    const excerpt = blog?.excerpt || '';
-    const title = blog?.title || '';
-    const slug = blog?.slug || '';
-    const featuredImage = blog?.featuredImageUrl || (blog?.featuredImage?.url || '');
-    const contentBlocks = Array.isArray(blog?.contentBlocks) ? blog.contentBlocks : [];
-    const hasContent = contentBlocks.some((block) => {
-      if (block.type === 'heading') return Boolean(block.content && block.content.trim());
-      if (block.type === 'paragraph') return Boolean(block.content && block.content.trim());
-      if (block.type === 'image') return Boolean(block.url);
-      if (block.type === 'list') return Boolean((block.items || []).some((item) => item && item.trim()));
-      if (block.type === 'quote') return Boolean(block.content && block.content.trim());
-      return false;
-    });
-    const blocks = [
-      {
-        key: 'title',
-        label: 'Title present',
-        passed: Boolean(title.trim()),
-        detail: title.trim() ? 'Your article has a title.' : 'Add a strong title for the article.'
-      },
-      {
-        key: 'slug',
-        label: 'Slug present',
-        passed: Boolean(slug.trim()),
-        detail: slug.trim() ? 'The article URL slug is ready.' : 'Define a clean slug for the article URL.'
-      },
-      {
-        key: 'seoTitle',
-        label: 'SEO title present',
-        passed: Boolean((seo.title || '').trim()),
-        detail: (seo.title || '').trim() ? 'SEO title is ready.' : 'Add an SEO title to improve search result relevance.'
-      },
-      {
-        key: 'description',
-        label: 'Meta description present',
-        passed: Boolean((seo.description || '').trim()),
-        detail: (seo.description || '').trim() ? 'Meta description is ready.' : 'Write a concise meta description.'
-      },
-      {
-        key: 'excerpt',
-        label: 'Excerpt present',
-        passed: Boolean(excerpt.trim()),
-        detail: excerpt.trim() ? 'The intro copy for previews is present.' : 'Add an excerpt so cards and previews feel complete.'
-      },
-      {
-        key: 'featuredImage',
-        label: 'Featured image',
-        passed: Boolean(featuredImage),
-        detail: featuredImage ? 'A featured image is attached.' : 'Add a featured image to strengthen the article preview.'
-      },
-      {
-        key: 'altText',
-        label: 'Image alt text',
-        passed: Boolean((blog?.featuredImage?.alt || '').trim() || (blog?.contentBlocks || []).some((block) => block.type === 'image' && block.alt && block.alt.trim())),
-        detail: 'Ensure important images include descriptive alt text.'
-      },
-      {
-        key: 'content',
-        label: 'Meaningful content',
-        passed: hasContent,
-        detail: hasContent ? 'The article contains structured content blocks.' : 'Add at least one content block so the article feels complete.'
-      },
-      {
-        key: 'keyword',
-        label: 'Target keyword',
-        passed: Boolean((seo.targetKeyword || '').trim()),
-        detail: (seo.targetKeyword || '').trim() ? 'A target keyword is set.' : 'Add a target keyword to guide the article strategy.'
-      }
-    ];
-    return blocks;
-  }
-
-  function renderSeoInsights(blog) {
-    const items = getSeoValidationItems(blog);
-    const html = items.map((item) => `
-      <div class="editor-insight-item ${item.passed ? 'is-good' : 'is-warn'}">
-        <div>
-          <strong>${escapeHtml(item.label)}</strong>
-          <p class="hint">${escapeHtml(item.detail)}</p>
-        </div>
-        <span class="status-inline ${item.passed ? 'is-good' : 'is-warn'}">${item.passed ? 'Good' : 'Needs work'}</span>
-      </div>
-    `).join('');
-    return `<div class="editor-insight-list">${html}</div>`;
+  function setBusyState(isBusy, text = 'Saving…') {
+    const button = document.getElementById('saveDraftButton');
+    if (button) button.disabled = isBusy;
+    const publishButton = document.getElementById('publishButton');
+    if (publishButton) publishButton.disabled = isBusy;
   }
 
   function renderDashboard() {
@@ -413,81 +165,45 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
       draftBlogsCount.textContent = String(draftCount);
       monthlyBlogStatus.textContent = currentMonthPublished > 0 ? 'Published' : 'Pending';
 
-      const recent = blogs.slice(0, 4);
+      const recent = blogs.slice(0, 5);
       if (recent.length === 0) {
         moduleContent.innerHTML = `
-          <div class="blog-manager-shell">
-            <div class="blog-manager-header">
-              <div>
-                <h3>Dashboard</h3>
-                <p>Create your first article and give your content a polished publishing workflow.</p>
-              </div>
-              <button class="btn btn-primary" id="createBlogButton" type="button">+ New Blog</button>
-            </div>
-            <div class="empty-state">
-              <p>No blog posts yet.</p>
-              <p>Your published and draft articles will appear here.</p>
-            </div>
+          <div class="empty-state">
+            <p>No blog posts yet.</p>
+            <p>Your published and draft articles will appear here.</p>
           </div>
         `;
-        attachDashboardEvents();
         return;
       }
 
       moduleContent.innerHTML = `
-        <div class="blog-manager-shell">
-          <div class="blog-manager-header">
-            <div>
-              <h3>Dashboard</h3>
-              <p>Monitor your latest blog activity and jump straight into publishing.</p>
-            </div>
-            <button class="btn btn-primary" id="createBlogButton" type="button">+ New Blog</button>
-          </div>
-          <div class="blog-card-stack">
-            ${recent.map((blog) => `
-              <article class="blog-card-item">
-                <div>
-                  <div class="blog-meta-row">
-                    <span class="status-pill ${blog.status === 'published' ? 'published' : 'draft'}">${blog.status === 'published' ? 'Published' : 'Draft'}</span>
-                    <span class="blog-pill">${escapeHtml(blog.category || 'Uncategorized')}</span>
-                  </div>
-                  <h4>${escapeHtml(blog.title || 'Untitled blog')}</h4>
-                  <p class="blog-card-item__meta">Last updated ${formatDate(blog.updatedAt || blog.publishedAt || blog.createdAt)}</p>
-                </div>
-                <div class="blog-row__actions">
-                  <button class="btn btn-outline btn-small" data-action="edit" data-id="${blog.id}" type="button">Edit</button>
-                  <button class="btn btn-outline btn-small" data-action="preview" data-id="${blog.id}" type="button">Preview</button>
-                </div>
-              </article>
-            `).join('')}
-          </div>
+        <div class="activity-list">
+          ${recent.map((blog) => `
+            <article class="activity-item">
+              <div>
+                <h4>${blog.title || 'Untitled blog'}</h4>
+                <p>${blog.status === 'published' ? 'Published' : 'Draft'} • ${formatDate(blog.status === 'published' ? blog.publishedAt : blog.updatedAt)}</p>
+              </div>
+              <span class="status-pill ${blog.status === 'published' ? 'published' : 'draft'}">${blog.status === 'published' ? 'Published' : 'Draft'}</span>
+            </article>
+          `).join('')}
         </div>
       `;
-      attachDashboardEvents();
     }, (error) => {
       console.error(error);
       moduleContent.innerHTML = '<div class="empty-state"><p>Unable to load blog activity right now.</p></div>';
     });
   }
 
-  function attachDashboardEvents() {
-    const createButton = moduleContent.querySelector('#createBlogButton');
-    if (createButton) createButton.addEventListener('click', () => openEditor());
-
-    moduleContent.querySelectorAll('[data-action]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const action = button.dataset.action;
-        const id = button.dataset.id;
-        if (!id) return;
-        const blog = blogs.find((item) => item.id === id);
-        if (!blog) return;
-        if (action === 'edit') {
-          await openEditor(blog.id);
-        } else if (action === 'preview') {
-          openPreview(blog);
-        }
-      });
-    });
+  async function ensureAuthorized() {
+    if (!auth.currentUser) {
+      throw new Error('Authentication required');
+    }
+    currentUserUid = auth.currentUser.uid;
+    if (adminUid && currentUserUid !== adminUid) {
+      throw new Error('You are not authorized to manage blogs.');
+    }
+    return true;
   }
 
   function renderBlogsView() {
@@ -526,7 +242,7 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
           <div class="blog-manager-header">
             <div>
               <h3>Blog Management</h3>
-              <p>Manage your articles, drafts, and published posts.</p>
+              <p>Manage your articles, drafts and published posts.</p>
             </div>
             <button class="btn btn-primary" id="createBlogButton" type="button">+ Create Blog</button>
           </div>
@@ -551,7 +267,7 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
         <div class="blog-manager-header">
           <div>
             <h3>Blog Management</h3>
-            <p>Manage your articles, drafts, and publishing status.</p>
+            <p>Manage your articles, drafts and published posts.</p>
           </div>
           <button class="btn btn-primary" id="createBlogButton" type="button">+ Create Blog</button>
         </div>
@@ -561,35 +277,24 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
           <button class="filter-pill ${currentFilter === 'drafts' ? 'active' : ''}" data-filter="drafts" type="button">Drafts</button>
         </div>
         <div class="blog-list">
-          ${filtered.map((blog) => {
-            const seoItems = getSeoValidationItems(blog);
-            const seoPassed = seoItems.filter((item) => item.passed).length;
-            const seoStatus = seoPassed >= seoItems.length - 2 ? 'Good' : 'Needs work';
-            return `
-              <article class="blog-row">
-                <div class="blog-row__main">
-                  <div class="blog-meta-row">
-                    <span class="status-pill ${blog.status === 'published' ? 'published' : 'draft'}">${blog.status === 'published' ? 'Published' : 'Draft'}</span>
-                    <span class="blog-pill">${escapeHtml(blog.category || 'Uncategorized')}</span>
-                    <span class="blog-pill">SEO ${escapeHtml(seoStatus)}</span>
-                  </div>
-                  <h4>${escapeHtml(blog.title || 'Untitled blog')}</h4>
-                  <p>${escapeHtml(blog.excerpt || 'Add an excerpt to improve the article preview.')}</p>
-                </div>
-                <div class="blog-row__meta">
-                  <span><strong>Published:</strong> ${escapeHtml(formatDate(blog.publishedAt || blog.createdAt))}</span>
-                  <span><strong>Updated:</strong> ${escapeHtml(formatDate(blog.updatedAt || blog.publishedAt || blog.createdAt))}</span>
-                  <span><strong>SEO checks:</strong> ${seoPassed}/${seoItems.length}</span>
-                </div>
-                <div class="blog-row__actions">
-                  <button class="btn btn-outline btn-small" data-action="edit" data-id="${blog.id}" type="button">Edit</button>
-                  <button class="btn btn-outline btn-small" data-action="preview" data-id="${blog.id}" type="button">Preview</button>
-                  ${blog.status === 'published' ? `<button class="btn btn-outline btn-small" data-action="unpublish" data-id="${blog.id}" type="button">Unpublish</button>` : `<button class="btn btn-outline btn-small" data-action="publish" data-id="${blog.id}" type="button">Publish</button>`}
-                  <button class="btn btn-outline btn-small danger" data-action="delete" data-id="${blog.id}" type="button">Delete</button>
-                </div>
-              </article>
-            `;
-          }).join('')}
+          ${filtered.map((blog) => `
+            <article class="blog-row">
+              <div class="blog-row__main">
+                <h4>${blog.title || 'Untitled blog'}</h4>
+                <p>${blog.category || 'Uncategorized'}</p>
+              </div>
+              <div class="blog-row__meta">
+                <span class="status-pill ${blog.status === 'published' ? 'published' : 'draft'}">${blog.status === 'published' ? 'Published' : 'Draft'}</span>
+                <span>${blog.status === 'published' ? formatDate(blog.publishedAt) : formatDate(blog.updatedAt)}</span>
+              </div>
+              <div class="blog-row__actions">
+                <button class="btn btn-outline btn-small" data-action="edit" data-id="${blog.id}" type="button">Edit</button>
+                <button class="btn btn-outline btn-small" data-action="preview" data-id="${blog.id}" type="button">Preview</button>
+                ${blog.status === 'published' ? `<button class="btn btn-outline btn-small" data-action="unpublish" data-id="${blog.id}" type="button">Unpublish</button>` : `<button class="btn btn-outline btn-small" data-action="publish" data-id="${blog.id}" type="button">Publish</button>`}
+                <button class="btn btn-outline btn-small danger" data-action="delete" data-id="${blog.id}" type="button">Delete</button>
+              </div>
+            </article>
+          `).join('')}
         </div>
       </div>
     `;
@@ -682,7 +387,7 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
           <div>
             <button class="btn btn-outline btn-small" id="backToBlogsButton" type="button">← Back to Blogs</button>
             <h3>${editingId ? 'Edit Blog' : 'Create Blog'}</h3>
-            <p class="editor-subtitle">Build a structured article draft, review SEO checks, and publish when ready.</p>
+            <p class="editor-subtitle">Build a structured article draft or publish it when you are ready.</p>
           </div>
           <div class="editor-actions">
             <button class="btn btn-outline btn-small" id="saveDraftButton" type="button">Save Draft</button>
@@ -691,122 +396,102 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
         </div>
         <div class="editor-grid">
           <section class="editor-card">
-            <div class="editor-section-card">
-              <div class="editor-section-head">
-                <h4>Content</h4>
-                <span class="status-pill ${currentDraft.status === 'published' ? 'published' : 'draft'}">${currentDraft.status === 'published' ? 'Published' : 'Draft'}</span>
+            <h4>Blog Details</h4>
+            <div class="field-group field-group--stacked">
+              <label for="blogTitle">Title *</label>
+              <input id="blogTitle" type="text" value="${escapeHtml(currentDraft.title)}">
+            </div>
+            <div class="field-group field-group--stacked">
+              <label for="blogSlug">Slug *</label>
+              <input id="blogSlug" type="text" value="${escapeHtml(currentDraft.slug)}">
+            </div>
+            <div class="field-group field-group--stacked">
+              <label for="blogExcerpt">Excerpt *</label>
+              <textarea id="blogExcerpt" rows="4">${escapeHtml(currentDraft.excerpt)}</textarea>
+              <p class="hint">Recommended length: 120–180 characters.</p>
+              <p class="hint" id="excerptCounter">${currentDraft.excerpt.length}/180</p>
+            </div>
+            <div class="field-group field-group--stacked">
+              <label for="blogCategory">Category</label>
+              <select id="blogCategory">
+                <option value="">Select a category</option>
+                ${DEFAULT_CATEGORY_OPTIONS.map((category) => `<option value="${category}" ${currentDraft.category === category ? 'selected' : ''}>${category}</option>`).join('')}
+                ${currentDraft.category && !DEFAULT_CATEGORY_OPTIONS.includes(currentDraft.category) ? `<option value="${currentDraft.category}" selected>${currentDraft.category}</option>` : ''}
+              </select>
+            </div>
+            <div class="field-group field-group--stacked">
+              <label for="blogTags">Tags</label>
+              <div class="tag-input-row">
+                <input id="blogTagsInput" type="text" placeholder="Add tags">
+                <button class="btn btn-outline btn-small" id="addTagButton" type="button">Add</button>
               </div>
-              <div class="field-group field-group--stacked">
-                <label for="blogTitle">Title *</label>
-                <input id="blogTitle" type="text" value="${escapeHtml(currentDraft.title)}">
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="blogSlug">Slug *</label>
-                <input id="blogSlug" type="text" value="${escapeHtml(currentDraft.slug)}">
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="blogExcerpt">Excerpt *</label>
-                <textarea id="blogExcerpt" rows="4">${escapeHtml(currentDraft.excerpt)}</textarea>
-                <p class="hint">Recommended length: 120–180 characters.</p>
-                <p class="hint" id="excerptCounter">${currentDraft.excerpt.length}/180</p>
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="blogCategory">Category</label>
-                <select id="blogCategory">
-                  <option value="">Select a category</option>
-                  ${DEFAULT_CATEGORY_OPTIONS.map((category) => `<option value="${category}" ${currentDraft.category === category ? 'selected' : ''}>${category}</option>`).join('')}
-                  ${currentDraft.category && !DEFAULT_CATEGORY_OPTIONS.includes(currentDraft.category) ? `<option value="${currentDraft.category}" selected>${currentDraft.category}</option>` : ''}
-                </select>
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="blogTags">Tags</label>
-                <div class="tag-input-row">
-                  <input id="blogTagsInput" type="text" placeholder="Add tags">
-                  <button class="btn btn-outline btn-small" id="addTagButton" type="button">Add</button>
+              <div class="tag-list" id="tagList">${currentDraft.tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag)} <button type="button" data-remove-tag="${escapeHtml(tag)}">×</button></span>`).join('')}</div>
+            </div>
+            <div class="field-group field-group--stacked">
+              <label>Featured Image</label>
+              <div class="upload-card">
+                <div class="upload-dropzone" data-drop-zone="featured">
+                  <label class="upload-picker" for="featuredImageInput">
+                    <input id="featuredImageInput" type="file" accept="image/jpeg,image/png,image/webp">
+                    <span>Choose Image</span>
+                  </label>
+                  <p class="hint">Drop image here or choose one from your computer.</p>
                 </div>
-                <div class="tag-list" id="tagList">${currentDraft.tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag)} <button type="button" data-remove-tag="${escapeHtml(tag)}">×</button></span>`).join('')}</div>
-              </div>
-              <div class="field-group field-group--stacked">
-                <label>Featured Image</label>
-                <div class="upload-card">
-                  <div class="upload-dropzone" data-drop-zone="featured">
-                    <label class="upload-picker" for="featuredImageInput">
-                      <input id="featuredImageInput" type="file" accept="image/jpeg,image/png,image/webp">
-                      <span>Choose Image</span>
-                    </label>
-                    <p class="hint">Drop image here or choose one from your computer.</p>
-                  </div>
-                  <p class="hint">JPG, PNG, or WebP • Max 5 MB</p>
-                  <div id="featuredImageStatus" class="upload-status">Choose an image from your computer to upload it automatically.</div>
-                  <div id="featuredImagePreview" class="image-preview-shell">${renderFeaturedImagePreview()}</div>
-                  ${getFeaturedImageUrl(currentDraft) ? `<div class="upload-actions">
-                    <button class="btn btn-outline btn-small" id="replaceFeaturedImageButton" type="button">Replace Image</button>
-                    <button class="btn btn-outline btn-small" id="removeFeaturedImageButton" type="button">Remove Image</button>
-                  </div>` : ''}
-                  <button class="text-link" id="showFeaturedUrlButton" type="button">Use image URL instead</button>
-                  <div class="url-fallback" id="featuredUrlFallback" hidden>
-                    <label for="blogFeaturedImage">Image URL</label>
-                    <input id="blogFeaturedImage" type="text" value="${escapeHtml(getFeaturedImageUrl(currentDraft))}">
-                  </div>
-                  <label for="featuredImageAlt">Alt Text</label>
-                  <input id="featuredImageAlt" type="text" value="${escapeHtml(getFeaturedImageMeta(currentDraft).alt)}" placeholder="Describe the image for accessibility and SEO.">
+                <p class="hint">JPG, PNG, or WebP • Max 5 MB</p>
+                <div id="featuredImageStatus" class="upload-status">Choose an image from your computer to upload it automatically.</div>
+                <div id="featuredImagePreview" class="image-preview-shell">${renderFeaturedImagePreview()}</div>
+                ${getFeaturedImageUrl(currentDraft) ? `<div class="upload-actions">
+                  <button class="btn btn-outline btn-small" id="replaceFeaturedImageButton" type="button">Replace Image</button>
+                  <button class="btn btn-outline btn-small" id="removeFeaturedImageButton" type="button">Remove Image</button>
+                </div>` : ''}
+                <button class="text-link" id="showFeaturedUrlButton" type="button">Use image URL instead</button>
+                <div class="url-fallback" id="featuredUrlFallback" hidden>
+                  <label for="blogFeaturedImage">Image URL</label>
+                  <input id="blogFeaturedImage" type="text" value="${escapeHtml(getFeaturedImageUrl(currentDraft))}">
                 </div>
+                <label for="featuredImageAlt">Alt Text</label>
+                <input id="featuredImageAlt" type="text" value="${escapeHtml(getFeaturedImageMeta(currentDraft).alt)}" placeholder="Describe the image for accessibility and SEO.">
+                <p class="hint">Describe the image for accessibility and SEO.</p>
               </div>
-              <div class="field-group field-group--stacked">
-                <label>Article Content</label>
-                <div class="block-toolbar">
-                  <button class="btn btn-outline btn-small" data-block-action="heading" type="button">+ Heading</button>
-                  <button class="btn btn-outline btn-small" data-block-action="paragraph" type="button">+ Paragraph</button>
-                  <button class="btn btn-outline btn-small" data-block-action="image" type="button">+ Image</button>
-                  <button class="btn btn-outline btn-small" data-block-action="list" type="button">+ List</button>
-                  <button class="btn btn-outline btn-small" data-block-action="quote" type="button">+ Quote</button>
-                </div>
-                <div id="contentBlocks">${renderBlocks()}</div>
+            </div>
+            <div class="field-group field-group--stacked">
+              <label>Article Content</label>
+              <div class="block-toolbar">
+                <button class="btn btn-outline btn-small" data-block-action="heading" type="button">+ Heading</button>
+                <button class="btn btn-outline btn-small" data-block-action="paragraph" type="button">+ Paragraph</button>
+                <button class="btn btn-outline btn-small" data-block-action="image" type="button">+ Image</button>
+                <button class="btn btn-outline btn-small" data-block-action="list" type="button">+ List</button>
+                <button class="btn btn-outline btn-small" data-block-action="quote" type="button">+ Quote</button>
               </div>
+              <div id="contentBlocks">${renderBlocks()}</div>
             </div>
           </section>
-          <aside class="editor-card">
-            <div class="editor-section-card">
-              <div class="editor-section-head">
-                <h4>SEO</h4>
-                <span class="status-pill ${currentDraft.status === 'published' ? 'published' : 'draft'}">SEO</span>
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="seoTitle">SEO Title</label>
-                <input id="seoTitle" type="text" value="${escapeHtml(currentDraft.seo.title)}">
-                <p class="hint" id="seoTitleCounter">0/60</p>
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="seoDescription">Meta Description</label>
-                <textarea id="seoDescription" rows="4">${escapeHtml(currentDraft.seo.description)}</textarea>
-                <p class="hint" id="seoDescriptionCounter">0/160</p>
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="seoTargetKeyword">Target Keyword</label>
-                <input id="seoTargetKeyword" type="text" value="${escapeHtml(currentDraft.seo.targetKeyword)}">
-              </div>
-              <div class="field-group field-group--stacked">
-                <label for="seoSecondaryKeywords">Secondary Keywords</label>
-                <input id="seoSecondaryKeywords" type="text" value="${escapeHtml(currentDraft.seo.secondaryKeywords.join(', '))}">
-              </div>
-              <div class="search-preview-card">
-                <p class="preview-domain">sagar-psycho.github.io/sagar-growth-systems/blog/</p>
-                <h5 class="preview-title" id="previewTitle">${escapeHtml(currentDraft.seo.title || currentDraft.title || 'Blog title')}</h5>
-                <p class="preview-url" id="previewSlug">/${escapeHtml(currentDraft.slug || 'your-slug')}/</p>
-                <p class="preview-description" id="previewDescription">${escapeHtml(currentDraft.seo.description || currentDraft.excerpt || 'Your meta description preview will appear here.')}</p>
-              </div>
-              <div class="editor-insight-list" id="seoValidationList">${renderSeoInsights(currentDraft)}</div>
+          <aside class="editor-card editor-card--side">
+            <h4>SEO Settings</h4>
+            <div class="field-group field-group--stacked">
+              <label for="seoTitle">SEO Title</label>
+              <input id="seoTitle" type="text" value="${escapeHtml(currentDraft.seo.title)}">
+              <p class="hint" id="seoTitleCounter">0/60</p>
             </div>
-            <div class="editor-section-card">
-              <div class="editor-section-head">
-                <h4>Publishing</h4>
-                <span class="status-pill ${currentDraft.status === 'published' ? 'published' : 'draft'}">${currentDraft.status === 'published' ? 'Published' : 'Draft'}</span>
-              </div>
-              <p class="hint">Publishing keeps the article available to the public site generation flow. SEO recommendations do not block publishing.</p>
-              <div class="editor-actions">
-                <button class="btn btn-outline btn-small" id="saveDraftButton" type="button">Save Draft</button>
-                <button class="btn btn-primary btn-small" id="publishButton" type="button">Publish</button>
-              </div>
+            <div class="field-group field-group--stacked">
+              <label for="seoDescription">Meta Description</label>
+              <textarea id="seoDescription" rows="4">${escapeHtml(currentDraft.seo.description)}</textarea>
+              <p class="hint" id="seoDescriptionCounter">0/160</p>
+            </div>
+            <div class="field-group field-group--stacked">
+              <label for="seoTargetKeyword">Target Keyword</label>
+              <input id="seoTargetKeyword" type="text" value="${escapeHtml(currentDraft.seo.targetKeyword)}">
+            </div>
+            <div class="field-group field-group--stacked">
+              <label for="seoSecondaryKeywords">Secondary Keywords</label>
+              <input id="seoSecondaryKeywords" type="text" value="${escapeHtml(currentDraft.seo.secondaryKeywords.join(', '))}">
+            </div>
+            <div class="search-preview">
+              <h5>Search Preview</h5>
+              <p class="preview-domain">sagar-psycho.github.io/sagar-growth-systems/blog/</p>
+              <h6 id="previewTitle">${escapeHtml(currentDraft.seo.title || currentDraft.title || 'Blog title')}</h6>
+              <p id="previewSlug">/${escapeHtml(currentDraft.slug || 'your-slug')}/</p>
+              <p id="previewDescription">${escapeHtml(currentDraft.seo.description || currentDraft.excerpt || 'Your meta description preview will appear here.')}</p>
             </div>
           </aside>
         </div>
@@ -887,6 +572,7 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
               <div class="field-group field-group--stacked">
                 <label>Alt Text</label>
                 <input data-block-field="alt" data-block-id="${blockId}" value="${escapeHtml(block.alt || '')}">
+                <p class="hint">Describe the image for accessibility and SEO.</p>
                 <label>Caption</label>
                 <input data-block-field="caption" data-block-id="${blockId}" value="${escapeHtml(block.caption || '')}">
               </div>
@@ -911,7 +597,7 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
               <option value="ordered" ${block.style === 'ordered' ? 'selected' : ''}>Numbered</option>
             </select>
             <div class="list-items">
-              ${(block.items || []).map((item, index) => `
+              ${block.items.map((item, index) => `
                 <div class="list-item-row">
                   <input data-block-list-item="${index}" data-block-id="${blockId}" value="${escapeHtml(item)}">
                   <button type="button" data-remove-list-item="${blockId}" data-list-index="${index}">×</button>
@@ -1018,7 +704,11 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
         const block = currentDraft.contentBlocks.find((item) => item.id === blockId);
         if (!block) return;
         const key = field.getAttribute('data-block-field');
-        block[key] = field.value;
+        if (key === 'level' || key === 'style') {
+          block[key] = field.value;
+        } else {
+          block[key] = field.value;
+        }
         isDirty = true;
         syncEditorCounters();
       });
@@ -1178,7 +868,6 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
     seoTargetKeywordInput.addEventListener('input', () => {
       currentDraft.seo.targetKeyword = seoTargetKeywordInput.value;
       isDirty = true;
-      syncEditorCounters();
     });
 
     seoSecondaryKeywordsInput.addEventListener('input', () => {
@@ -1208,13 +897,11 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
       });
     }
 
-    moduleContent.querySelectorAll('#saveDraftButton').forEach((button) => {
-      button.addEventListener('click', () => saveBlog('draft'));
-    });
+    const saveButton = moduleContent.querySelector('#saveDraftButton');
+    if (saveButton) saveButton.addEventListener('click', () => saveBlog('draft'));
 
-    moduleContent.querySelectorAll('#publishButton').forEach((button) => {
-      button.addEventListener('click', () => saveBlog('published'));
-    });
+    const publishButton = moduleContent.querySelector('#publishButton');
+    if (publishButton) publishButton.addEventListener('click', () => saveBlog('published'));
   }
 
   function syncEditorCounters() {
@@ -1237,11 +924,6 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
     if (previewTitle) previewTitle.textContent = currentDraft.seo.title || currentDraft.title || 'Blog title';
     if (previewSlug) previewSlug.textContent = `/${currentDraft.slug || 'your-slug'}/`;
     if (previewDescription) previewDescription.textContent = currentDraft.seo.description || currentDraft.excerpt || 'Your meta description preview will appear here.';
-
-    const seoValidationList = moduleContent.querySelector('#seoValidationList');
-    if (seoValidationList) {
-      seoValidationList.innerHTML = renderSeoInsights(currentDraft);
-    }
   }
 
   function addTag(tagText) {
@@ -1251,6 +933,153 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
       currentDraft.tags.push(value);
       isDirty = true;
       renderEditor();
+    }
+  }
+
+  function getTimestampValue(value) {
+    if (!value) return null;
+    if (value instanceof Timestamp) return value.toDate();
+    if (value?.toDate) return value.toDate();
+    if (value instanceof Date) return value;
+    if (typeof value === 'string') {
+      const parsed = new Date(value);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    }
+    return null;
+  }
+
+  function getFeaturedImageMeta(blog) {
+    const featured = blog?.featuredImage;
+    if (featured && typeof featured === 'object') {
+      return {
+        url: featured.url || '',
+        publicId: featured.publicId || '',
+        alt: featured.alt || '',
+        width: featured.width || null,
+        height: featured.height || null
+      };
+    }
+    return {
+      url: blog?.featuredImageUrl || '',
+      publicId: '',
+      alt: '',
+      width: null,
+      height: null
+    };
+  }
+
+  function getFeaturedImageUrl(blog) {
+    return getFeaturedImageMeta(blog).url;
+  }
+
+  function renderFeaturedImagePreview() {
+    const image = getFeaturedImageMeta(currentDraft);
+    if (!image.url) {
+      return '<p class="hint">Choose an image from your computer to upload it automatically.</p>';
+    }
+    return `<img class="preview-image" src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || currentDraft.title || 'Featured image')}" onerror="this.style.display='none'">`;
+  }
+
+  function setFeaturedImageFromUrl(url) {
+    const normalized = String(url || '').trim();
+    currentDraft.featuredImage = {
+      url: normalized,
+      publicId: currentDraft.featuredImage?.publicId || '',
+      alt: currentDraft.featuredImage?.alt || '',
+      width: currentDraft.featuredImage?.width || null,
+      height: currentDraft.featuredImage?.height || null
+    };
+    currentDraft.featuredImageUrl = normalized;
+  }
+
+  function removeFeaturedImage() {
+    currentDraft.featuredImage = { url: '', publicId: '', alt: '', width: null, height: null };
+    currentDraft.featuredImageUrl = '';
+    isDirty = true;
+    renderEditor();
+  }
+
+  function removeBlockImage(blockId) {
+    const block = currentDraft.contentBlocks.find((item) => item.id === blockId);
+    if (!block) return;
+    block.url = '';
+    block.publicId = '';
+    block.width = null;
+    block.height = null;
+    isDirty = true;
+    renderEditor();
+  }
+
+  async function uploadFeaturedImage(file) {
+    if (activeUpload) {
+      setMessage('Please wait for image uploads to finish.', 'info');
+      return;
+    }
+    if (!file) return;
+    const status = moduleContent.querySelector('#featuredImageStatus');
+    if (status) status.textContent = 'Uploading image...';
+    activeUpload = true;
+    setBusyState(true);
+    try {
+      const data = await uploadImage(file, {
+        folder: 'portfolio/blogs/featured',
+        onProgress: (percentage) => {
+          if (status) status.textContent = `Uploading image... ${percentage}%`;
+        }
+      });
+      currentDraft.featuredImage = {
+        url: data.url,
+        publicId: data.publicId,
+        alt: currentDraft.featuredImage?.alt || '',
+        width: data.width,
+        height: data.height
+      };
+      currentDraft.featuredImageUrl = data.url;
+      isDirty = true;
+      renderEditor();
+      if (status) status.textContent = 'Image uploaded successfully.';
+      setMessage('Image uploaded successfully.', 'success');
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Unable to upload image. Please try again.';
+      setMessage(error.message || 'Unable to upload image. Please try again.', 'error');
+    } finally {
+      activeUpload = false;
+      setBusyState(false);
+    }
+  }
+
+  async function uploadBlockImage(file, blockId) {
+    if (activeUpload) {
+      setMessage('Please wait for image uploads to finish.', 'info');
+      return;
+    }
+    const statusEl = moduleContent.querySelector(`[data-block-status="${blockId}"]`);
+    if (statusEl) statusEl.textContent = 'Uploading image...';
+    activeUpload = true;
+    setBusyState(true);
+    try {
+      const data = await uploadImage(file, {
+        folder: 'portfolio/blogs/content',
+        onProgress: (percentage) => {
+          if (statusEl) statusEl.textContent = `Uploading image... ${percentage}%`;
+        }
+      });
+      const block = currentDraft.contentBlocks.find((item) => item.id === blockId);
+      if (!block) return;
+      block.url = data.url;
+      block.publicId = data.publicId;
+      block.width = data.width;
+      block.height = data.height;
+      isDirty = true;
+      renderEditor();
+      if (statusEl) statusEl.textContent = 'Image uploaded successfully.';
+      setMessage('Image uploaded successfully.', 'success');
+    } catch (error) {
+      if (statusEl) statusEl.textContent = error.message || 'Unable to upload image. Please try again.';
+      setMessage(error.message || 'Unable to upload image. Please try again.', 'error');
+    } finally {
+      activeUpload = false;
+      setBusyState(false);
     }
   }
 
@@ -1428,4 +1257,13 @@ export function initBlogManager({ auth, db, publishedBlogsCount, draftBlogsCount
     renderBlogsView,
     openEditor
   };
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

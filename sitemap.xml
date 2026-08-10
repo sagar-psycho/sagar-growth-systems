@@ -1,24 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://sagar-psycho.github.io/sagar-growth-systems/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://sagar-psycho.github.io/sagar-growth-systems/portfolio/</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://sagar-psycho.github.io/sagar-growth-systems/blog/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://sagar-psycho.github.io/sagar-growth-systems/blog/how-ai-is-changing-digital-marketing-in-2026/</loc>
-    <lastmod>2026-08-08</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
+
+    <url>
+        <loc>https://sagar-psycho.github.io/sagar-growth-systems/</loc>
+    </url>
+
+    <url>
+        <loc>https://sagar-psycho.github.io/sagar-growth-systems/portfolio/</loc>
+    </url>
+
 </urlset>
