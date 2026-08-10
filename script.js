@@ -244,10 +244,35 @@ function attachWorkCardListeners(el){
   });
 }
 
+const SITE_ROOT_URL = window.location.hostname === 'localhost' ? '' : 'https://sagar-psycho.github.io/sagar-growth-systems';
+
+function getBlogArchiveUrl(){
+  return `${SITE_ROOT_URL}/blog/`;
+}
+
+function getBlogUrl(slug){
+  const normalizedSlug = String(slug || '').trim();
+  if (!normalizedSlug) {
+    return getBlogArchiveUrl();
+  }
+  return `${SITE_ROOT_URL}/blog/${encodeURIComponent(normalizedSlug)}/`;
+}
+
 function getBlogPageContext(){
+  const pathSegments = window.location.pathname.split('/').filter(Boolean);
+  const blogIndex = pathSegments.findIndex((segment) => segment === 'blog');
+  let slug = '';
+
+  if (blogIndex >= 0) {
+    slug = decodeURIComponent(pathSegments[blogIndex + 1] || '');
+  }
+
   const params = new URLSearchParams(window.location.search);
-  const slug = params.get('slug') || '';
-  const isBlogPage = window.location.pathname.includes('/blog/') || window.location.pathname.endsWith('/blog/');
+  if (!slug) {
+    slug = params.get('slug') || '';
+  }
+
+  const isBlogPage = blogIndex >= 0 || params.has('slug');
   return { slug, isBlogPage };
 }
 
@@ -265,9 +290,7 @@ function formatBlogDate(value){
 }
 
 function getBlogLink(slug){
-  const { isBlogPage } = getBlogPageContext();
-  const prefix = isBlogPage ? './' : 'blog/';
-  return `${prefix}?slug=${encodeURIComponent(slug)}`;
+  return getBlogUrl(slug);
 }
 
 function escapeBlogText(value){
@@ -279,13 +302,13 @@ function renderBlogContent(blocks){
   return blocks.map(block => {
     switch(block.type){
       case 'heading':
-        return `<h2>${escapeBlogText(block.content)}</h2>`;
+        return `<${block.level === 'h3' ? 'h3' : 'h2'}>${escapeBlogText(block.content)}</${block.level === 'h3' ? 'h3' : 'h2'}>`;
       case 'paragraph':
         return `<p>${escapeBlogText(block.content).replace(/\n/g, '<br>')}</p>`;
       case 'image':
-        return block.url ? `<figure class="article-figure"><img src="${escapeHtml(block.url)}" alt="${escapeBlogText(block.alt || '')}" loading="lazy">${block.caption ? `<figcaption>${escapeBlogText(block.caption)}</figcaption>` : ''}</figure>` : '';
+        return block.url ? `<figure class="article-figure"><img src="${escapeHtml(block.url)}" alt="${escapeBlogText(block.alt || '')}" loading="eager">${block.caption ? `<figcaption>${escapeBlogText(block.caption)}</figcaption>` : ''}</figure>` : '';
       case 'list':
-        return `<ul class="article-list">${(block.items || []).map(item => `<li>${escapeBlogText(item)}</li>`).join('')}</ul>`;
+        return `<${block.style === 'ordered' ? 'ol' : 'ul'} class="article-list">${(block.items || []).map(item => `<li>${escapeBlogText(item)}</li>`).join('')}</${block.style === 'ordered' ? 'ol' : 'ul'}>`;
       case 'quote':
         return `<blockquote class="article-quote">${escapeBlogText(block.content)}${block.attribution ? `<footer>${escapeBlogText(block.attribution)}</footer>` : ''}</blockquote>`;
       default:
@@ -326,7 +349,7 @@ function renderBlogArticle(blog, container, allBlogs = []){
   if(!container || !blog) return;
   const image = blog.featuredImageUrl || '';
   const excerpt = blog.excerpt || blog.seo?.description || '';
-  const archiveHref = (window.location.pathname.includes('/blog/') || window.location.pathname.endsWith('/blog/')) ? './' : 'blog/';
+  const archiveHref = getBlogArchiveUrl();
   const relatedBlogs = (allBlogs || []).filter(item => item && item.slug && item.slug !== blog.slug).slice(0, 3);
   const topicChips = [...new Set([...(blog.tags || []), blog.category].filter(Boolean))].slice(0, 6);
 
@@ -344,7 +367,7 @@ function renderBlogArticle(blog, container, allBlogs = []){
             <h1 class="article-title" id="article-title-${escapeHtml(blog.slug || 'post')}">${escapeBlogText(blog.title)}</h1>
             ${excerpt ? `<p class="article-excerpt">${escapeBlogText(excerpt)}</p>` : ''}
           </header>
-          ${image ? `<div class="blog-article__media"><img class="article-feature-image" src="${escapeHtml(image)}" alt="${escapeBlogText(blog.title)}" loading="lazy"></div>` : ''}
+          ${image ? `<div class="blog-article__media"><img class="article-feature-image" src="${escapeHtml(image)}" alt="${escapeBlogText(blog.title)}" loading="eager"></div>` : ''}
           <div class="blog-article__body article-content">${renderBlogContent(blog.contentBlocks || [])}</div>
         </div>
         <aside class="blog-article__sidebar" aria-label="Related articles">
@@ -406,9 +429,19 @@ async function cleanupPublicBlogListener(){
 function initPublicBlogFlow(){
   cleanupPublicBlogListener();
 
+  const { slug, isBlogPage } = getBlogPageContext();
+  const legacySlug = new URLSearchParams(window.location.search).get('slug');
+  if (legacySlug && isBlogPage && !window.location.pathname.endsWith(`/${legacySlug}/`) && !window.location.pathname.endsWith(`/blog/${legacySlug}`)) {
+    const targetUrl = getBlogUrl(legacySlug);
+    if (targetUrl && window.location.href !== targetUrl) {
+      window.history.replaceState({}, '', targetUrl);
+      window.location.replace(targetUrl);
+      return;
+    }
+  }
+
   const homeGrid = document.getElementById('homeBlogGrid');
   const blogView = document.getElementById('blogView');
-  const { slug, isBlogPage } = getBlogPageContext();
   const isArticleView = Boolean(isBlogPage && slug);
 
   if(blogView){

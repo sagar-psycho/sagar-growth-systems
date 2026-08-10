@@ -1,4 +1,4 @@
-import { firebaseConfig, adminUid } from './firebase-config.js';
+import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth,
@@ -85,6 +85,7 @@ function renderGreeting() {
 function setFormBusy(isBusy) {
   loginButton.disabled = isBusy;
   loginSpinner.hidden = !isBusy;
+  loginButton.classList.toggle('is-loading', isBusy);
   loginButton.querySelector('.btn-label').style.opacity = isBusy ? '0.7' : '1';
 }
 
@@ -183,7 +184,6 @@ function switchSection(section) {
     if (blogManager) {
       blogManager.renderBlogsView();
     }
-  
   } else {
     dashboardTitle.textContent = 'Portfolio Dashboard';
     activityHeading.textContent = 'Blog Activity';
